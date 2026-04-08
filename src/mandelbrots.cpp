@@ -9,16 +9,15 @@
 static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float* cur_ymax,
                        float* center_x, float* center_y, float* x_range,  float* y_range)
 {
-    printf("penis");
     float step_x = *x_range * 0.05f;
     float step_y = *y_range * 0.05f;
-    if (txGetAsyncKeyState(VK_RIGHT)) { *cur_xmin += step_x; *cur_xmax += step_x; }
-    if (txGetAsyncKeyState(VK_LEFT))  { *cur_xmin -= step_x; *cur_xmax -= step_x; }
-    if (txGetAsyncKeyState(VK_DOWN))  { *cur_ymin += step_y; *cur_ymax += step_y; }
-    if (txGetAsyncKeyState(VK_UP))    { *cur_ymin -= step_y; *cur_ymax -= step_y; }
+    if (GetAsyncKeyState(VK_RIGHT)) { printf("www"); *cur_xmin += step_x; *cur_xmax += step_x; }
+    if (GetAsyncKeyState(VK_LEFT))  { *cur_xmin -= step_x; *cur_xmax -= step_x; }
+    if (GetAsyncKeyState(VK_DOWN))  { *cur_ymin += step_y; *cur_ymax += step_y; }
+    if (GetAsyncKeyState(VK_UP))    { *cur_ymin -= step_y; *cur_ymax -= step_y; }
 
     const float zoom_factor = 0.9f;
-    if (txGetAsyncKeyState('W'))
+    if (GetAsyncKeyState('W'))
     {
         float new_x_range = *x_range * zoom_factor;
         float new_y_range = new_x_range * ((float)kHeight / kWidth);
@@ -29,7 +28,7 @@ static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float*
         *x_range = *cur_xmax - *cur_xmin;
         *y_range = *cur_ymax - *cur_ymin;
     }
-    if (txGetAsyncKeyState('S'))
+    if (GetAsyncKeyState('S'))
     {
         float new_x_range = *x_range / zoom_factor;
         float new_y_range = new_x_range * ((float)kHeight / kWidth);
@@ -39,6 +38,7 @@ static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float*
         *cur_ymax = *center_y + new_y_range * 0.5f;
         *x_range = *cur_xmax - *cur_xmin;
         *y_range = *cur_ymax - *cur_ymin;
+        printf("%f - new_x_range\n", new_x_range);
     }
 
     *center_x = (*cur_xmin + *cur_xmax) * 0.5f;
@@ -59,10 +59,10 @@ void SimpleMandelbrot(RGBQUAD* videoBuf)
     float center_y = (cur_ymin + cur_ymax) * 0.5f;
     float x_range = cur_xmax - cur_xmin;
     float y_range = cur_ymax - cur_ymin;
-    printf("Ale\n");
+    // printf("Ale\n");
+    // txBegin();
     while (!GetAsyncKeyState(VK_ESCAPE))
     {
-        txBegin();
         UpdateView(&cur_xmin, &cur_xmax, &cur_ymin, &cur_ymax,
                    &center_x, &center_y, &x_range,  &y_range);
 
@@ -97,8 +97,8 @@ void SimpleMandelbrot(RGBQUAD* videoBuf)
                 // printf("y=%d, pixel color: %d %d %d\n", y, videoBuf[y*kWidth].rgbRed, videoBuf[y*kWidth].rgbBlue, videoBuf[y*kWidth].rgbGreen);
             }
         }
-        txEnd();
     }
+    // txEnd();
 #else
     //FIXME
     // volatile RGBQUAD* vbuf = videoBuf; //чтобы компилятор не удалил код как DCE

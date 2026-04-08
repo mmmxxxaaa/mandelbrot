@@ -8,7 +8,7 @@ int main()
     printf("Graphics mode ON\n");
     txCreateWindow(kWidth, kHeight);
     txTextCursor(false);
-    txBegin();
+    // txBegin();
 #endif // _GRAPHICS_MODE
     Win32::_fpreset();
 //FIXME тоже условной компиляцией убрать передачу этого аргумента в функции
@@ -27,7 +27,7 @@ int main()
     #endif // _VECTOR_VER
 
 #if defined(_GRAPHICS_MODE)
-    txEnd();
+    // txEnd();
 #endif //_GRAPHICS_MODE
 
     return 0;
