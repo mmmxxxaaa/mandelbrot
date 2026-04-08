@@ -5,6 +5,7 @@
 int main()
 {
 #if defined(_GRAPHICS_MODE)
+    printf("Graphics mode ON\n");
     txCreateWindow(kWidth, kHeight);
     txTextCursor(false);
     txBegin();

@@ -4,6 +4,7 @@
 #include <TXLib.h>
 
 const int   kVecWidth = 4;
+const int   kPerformanceIters = 200;
 
 void SimpleMandelbrot(RGBQUAD* videoBuf);
 void QuadMandelbrot  (RGBQUAD* videoBuf);

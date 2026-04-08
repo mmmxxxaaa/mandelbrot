@@ -4,39 +4,135 @@
 #include <assert.h>
 #include "painting.h"
 
+#include <stdio.h>
+
+static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float* cur_ymax,
+                       float* center_x, float* center_y, float* x_range,  float* y_range)
+{
+    printf("penis");
+    float step_x = *x_range * 0.05f;
+    float step_y = *y_range * 0.05f;
+    if (txGetAsyncKeyState(VK_RIGHT)) { *cur_xmin += step_x; *cur_xmax += step_x; }
+    if (txGetAsyncKeyState(VK_LEFT))  { *cur_xmin -= step_x; *cur_xmax -= step_x; }
+    if (txGetAsyncKeyState(VK_DOWN))  { *cur_ymin += step_y; *cur_ymax += step_y; }
+    if (txGetAsyncKeyState(VK_UP))    { *cur_ymin -= step_y; *cur_ymax -= step_y; }
+
+    const float zoom_factor = 0.9f;
+    if (txGetAsyncKeyState('W'))
+    {
+        float new_x_range = *x_range * zoom_factor;
+        float new_y_range = new_x_range * ((float)kHeight / kWidth);
+        *cur_xmin = *center_x - new_x_range * 0.5f;
+        *cur_xmax = *center_x + new_x_range * 0.5f;
+        *cur_ymin = *center_y - new_y_range * 0.5f;
+        *cur_ymax = *center_y + new_y_range * 0.5f;
+        *x_range = *cur_xmax - *cur_xmin;
+        *y_range = *cur_ymax - *cur_ymin;
+    }
+    if (txGetAsyncKeyState('S'))
+    {
+        float new_x_range = *x_range / zoom_factor;
+        float new_y_range = new_x_range * ((float)kHeight / kWidth);
+        *cur_xmin = *center_x - new_x_range * 0.5f;
+        *cur_xmax = *center_x + new_x_range * 0.5f;
+        *cur_ymin = *center_y - new_y_range * 0.5f;
+        *cur_ymax = *center_y + new_y_range * 0.5f;
+        *x_range = *cur_xmax - *cur_xmin;
+        *y_range = *cur_ymax - *cur_ymin;
+    }
+
+    *center_x = (*cur_xmin + *cur_xmax) * 0.5f;
+    *center_y = (*cur_ymin + *cur_ymax) * 0.5f;
+
+    return;
+}
+
 void SimpleMandelbrot(RGBQUAD* videoBuf)
 {
     assert(videoBuf != NULL);
 
-    float x_range = kXmax - kXmin;
-    float y_range = kYmax - kYmin;
-    for (int y = 0; y < kHeight; y++)
-    {
-        float p0_im = kYmax - (float)y / kHeight * y_range;
-
-        for (int x = 0; x < kWidth; x++)
-        {
-            float p0_re = kXmin + (float)x / kWidth  * x_range;
-            float p_re = 0.0;
-            float p_im = 0.0;
-            int n_of_iter = 0;
-
-            while (n_of_iter < kMaxIter)
-            {
-                if (p_re * p_re + p_im * p_im > kLmax * kLmax)
-                    break;
-
-                float p_re_new = p_re * p_re - p_im * p_im + p0_re;
-                float p_im_new = 2.0f * p_re * p_im + p0_im;
-                p_re = p_re_new;
-                p_im = p_im_new;
-                n_of_iter++;
-            }
 #if defined(_GRAPHICS_MODE)
-            videoBuf[y * kWidth + x] = GetColor(n_of_iter);
-#endif //_GRAPHICS_MODE
+    float cur_xmin = kXmin, cur_xmax = kXmax;
+    float cur_ymin = kYmin, cur_ymax = kYmax;
+
+    float center_x = (cur_xmin + cur_xmax) * 0.5f;
+    float center_y = (cur_ymin + cur_ymax) * 0.5f;
+    float x_range = cur_xmax - cur_xmin;
+    float y_range = cur_ymax - cur_ymin;
+    printf("Ale\n");
+    while (!GetAsyncKeyState(VK_ESCAPE))
+    {
+        txBegin();
+        UpdateView(&cur_xmin, &cur_xmax, &cur_ymin, &cur_ymax,
+                   &center_x, &center_y, &x_range,  &y_range);
+
+        float x_range_local = cur_xmax - cur_xmin;
+        float y_range_local = cur_ymax - cur_ymin;
+
+        for (int y = 0; y < kHeight; y++)
+        {
+            if (GetAsyncKeyState(VK_ESCAPE)) break;
+
+            float p0_im = cur_ymax - (float)y / kHeight * y_range_local;
+
+            for (int x = 0; x < kWidth; x++)
+            {
+                float p0_re = cur_xmin + (float)x / kWidth * x_range_local;
+                float p_re = 0.0f, p_im = 0.0f;
+                int n_of_iter = 0;
+
+                while (n_of_iter < kMaxIter)
+                {
+                    if (p_re * p_re + p_im * p_im > kLmax * kLmax)
+                        break;
+                    float p_re_new = p_re * p_re - p_im * p_im + p0_re;
+                    float p_im_new = 2.0f * p_re * p_im + p0_im;
+                    p_re = p_re_new;
+                    p_im = p_im_new;
+                    n_of_iter++;
+                    // if (n_of_iter > 10)
+                    //     printf("n_of_iter: %d\n", n_of_iter);
+                }
+                videoBuf[y * kWidth + x] = GetColor(n_of_iter);
+                // printf("y=%d, pixel color: %d %d %d\n", y, videoBuf[y*kWidth].rgbRed, videoBuf[y*kWidth].rgbBlue, videoBuf[y*kWidth].rgbGreen);
+            }
+        }
+        txEnd();
+    }
+#else
+    //FIXME
+    // volatile RGBQUAD* vbuf = videoBuf; //чтобы компилятор не удалил код как DCE
+    for (int perf_iter = 0; perf_iter < kPerformanceIters; perf_iter++)
+    {
+        float x_range = kXmax - kXmin;
+        float y_range = kYmax - kYmin;
+        for (int y = 0; y < kHeight; y++)
+        {
+            float p0_im = kYmax - (float)y / kHeight * y_range;
+
+            for (int x = 0; x < kWidth; x++)
+            {
+                float p0_re = kXmin + (float)x / kWidth  * x_range;
+                float p_re = 0.0;
+                float p_im = 0.0;
+                int n_of_iter = 0;
+
+                while (n_of_iter < kMaxIter)
+                {
+                    if (p_re * p_re + p_im * p_im > kLmax * kLmax)
+                        break;
+
+                    float p_re_new = p_re * p_re - p_im * p_im + p0_re;
+                    float p_im_new = 2.0f * p_re * p_im + p0_im;
+                    p_re = p_re_new;
+                    p_im = p_im_new;
+                    n_of_iter++;
+                }
+                // vbuf[y * kWidth + x] = GetColor(n_of_iter); //FIXME
+            }
         }
     }
+#endif // _GRAPHICS_MODE
     return ;
 }
 
@@ -44,71 +140,139 @@ void QuadMandelbrot(RGBQUAD* videoBuf)
 {
     assert(videoBuf != NULL);
 
-    float x_range = kXmax - kXmin;
-    float y_range = kYmax - kYmin;
-
-    float dx = x_range / kWidth;
-
-    for (int y = 0; y < kHeight; y++)
-    {
-        float y0 = kYmax - (float)y / kHeight * y_range;
-
-        for (int x = 0; x < kWidth; x += kVecWidth)
-        {
-            float x0 = kXmin + (float)x / kWidth * x_range;
-
-            float x0_arr[kVecWidth] = {};
-            for (int i = 0; i < kVecWidth; i++) x0_arr[i] = x0 + i * dx;
-
-            float y0_arr[kVecWidth] = {};
-            for (int i = 0; i < kVecWidth; i++) y0_arr[i] = y0;
-
-            float x_arr[kVecWidth] = {};
-                for (int i = 0; i < kVecWidth; i++) x_arr[i] = x0_arr[i];
-
-            float y_arr[kVecWidth] = {};
-                for (int i = 0; i < kVecWidth; i++) y_arr[i] = y0_arr[i];
-
-            int n_of_iters[kVecWidth] = {};      // массив счетчиков итераций, пока хуй знает как назвать
-
-            for (int n = 0; n < kMaxIter; n++)
-            {
-                float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x2[i] = x_arr[i] * x_arr[i];
-                float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y2[i] = y_arr[i] * y_arr[i];
-                float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) xy[i] = x_arr[i] * y_arr[i];
-
-                float r2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) r2[i] = x2[i] + y2[i];
-
-                int cmp[kVecWidth] = {};
-                for (int i = 0; i < kVecWidth; i++)
-                    if (r2[i] <= kLmax  * kLmax )
-                        cmp[i] = 1;
-
-                int mask = 0;       //битовый флаг активности четырёх точек
-
-                for (int i = 0; i < kVecWidth; i++)
-                    mask |= cmp[i] << i;
-                if (!mask)
-                    break;
-
-                for (int i = 0; i < kVecWidth; i++)
-                    x_arr[i] = x2[i] - y2[i] + x0_arr[i];
-                for (int i = 0; i < kVecWidth; i++)
-                    y_arr[i] = xy[i] + xy[i] + y0_arr[i];
-
-                for (int i = 0; i < kVecWidth; i++)
-                    n_of_iters[i] += cmp[i];
-            }
-
 #if defined(_GRAPHICS_MODE)
-            for (int i = 0; i < kVecWidth; i++)
+    // Интерактивный режим
+    float cur_xmin = kXmin, cur_xmax = kXmax;
+    float cur_ymin = kYmin, cur_ymax = kYmax;
+    float center_x = (cur_xmin + cur_xmax) * 0.5f;
+    float center_y = (cur_ymin + cur_ymax) * 0.5f;
+    float x_range = cur_xmax - cur_xmin;
+    float y_range = cur_ymax - cur_ymin;
+
+
+    while (!GetAsyncKeyState(VK_ESCAPE))
+    {
+        UpdateView(&cur_xmin, &cur_xmax, &cur_ymin, &cur_ymax,
+                   &center_x, &center_y, &x_range,  &y_range);
+
+        float x_range_local = cur_xmax - cur_xmin;
+        float y_range_local = cur_ymax - cur_ymin;
+        float dx = x_range_local / kWidth;
+
+        for (int y = 0; y < kHeight; ++y)
+        {
+            if (GetAsyncKeyState(VK_ESCAPE)) break;
+            float y0 = cur_ymax - (float)y / kHeight * y_range_local;
+            for (int x = 0; x < kWidth; x += kVecWidth)
             {
-                int videoMemoryOffset = (kHeight - 1 - y) * kWidth + (x + i);
-                videoBuf[videoMemoryOffset] = GetColor(n_of_iters[i]);
+                float x0 = cur_xmin + (float)x / kWidth * x_range_local;
+
+                float x0_arr[kVecWidth];
+                for (int i = 0; i < kVecWidth; ++i) x0_arr[i] = x0 + i * dx;
+                float y0_arr[kVecWidth];
+                for (int i = 0; i < kVecWidth; ++i) y0_arr[i] = y0;
+
+                float x_arr[kVecWidth];
+                for (int i = 0; i < kVecWidth; ++i) x_arr[i] = x0_arr[i];
+                float y_arr[kVecWidth];
+                for (int i = 0; i < kVecWidth; ++i) y_arr[i] = y0_arr[i];
+
+                int n_of_iters[kVecWidth] = {0};
+
+                for (int n = 0; n < kMaxIter; ++n)
+                {
+                    float x2[kVecWidth], y2[kVecWidth], xy[kVecWidth], r2[kVecWidth];
+                    for (int i = 0; i < kVecWidth; ++i) x2[i] = x_arr[i] * x_arr[i];
+                    for (int i = 0; i < kVecWidth; ++i) y2[i] = y_arr[i] * y_arr[i];
+                    for (int i = 0; i < kVecWidth; ++i) xy[i] = x_arr[i] * y_arr[i];
+                    for (int i = 0; i < kVecWidth; ++i) r2[i] = x2[i] + y2[i];
+
+                    int cmp[kVecWidth] = {0};
+                    for (int i = 0; i < kVecWidth; ++i)
+                        if (r2[i] <= kLmax * kLmax) cmp[i] = 1;
+
+                    int mask = 0;
+                    for (int i = 0; i < kVecWidth; ++i) mask |= cmp[i] << i;
+                    if (!mask) break;
+
+                    for (int i = 0; i < kVecWidth; ++i) x_arr[i] = x2[i] - y2[i] + x0_arr[i];
+                    for (int i = 0; i < kVecWidth; ++i) y_arr[i] = xy[i] + xy[i] + y0_arr[i];
+                    for (int i = 0; i < kVecWidth; ++i) n_of_iters[i] += cmp[i];
+                }
+
+                for (int i = 0; i < kVecWidth; ++i)
+                {
+                    int offset = (kHeight - 1 - y) * kWidth + (x + i);
+                    videoBuf[offset] = GetColor(n_of_iters[i]);
+                }
             }
-#endif // _GRAPHICS_MODE
+        }
+        txEnd();
+        txBegin();
+    }
+#else
+    volatile RGBQUAD* vbuf = videoBuf;
+    for (int perf = 0; perf < kPerformanceIters; ++perf)
+    {
+        float x_range = kXmax - kXmin;
+        float y_range = kYmax - kYmin;
+
+        float dx = x_range / kWidth;
+
+        for (int y = 0; y < kHeight; y++)
+        {
+            float y0 = kYmax - (float)y / kHeight * y_range;
+
+            for (int x = 0; x < kWidth; x += kVecWidth)
+            {
+                float x0 = kXmin + (float)x / kWidth * x_range;
+
+                float x0_arr[kVecWidth] = {};
+                for (int i = 0; i < kVecWidth; i++) x0_arr[i] = x0 + i * dx;
+
+                float y0_arr[kVecWidth] = {};
+                for (int i = 0; i < kVecWidth; i++) y0_arr[i] = y0;
+
+                float x_arr[kVecWidth] = {};
+                    for (int i = 0; i < kVecWidth; i++) x_arr[i] = x0_arr[i];
+
+                float y_arr[kVecWidth] = {};
+                    for (int i = 0; i < kVecWidth; i++) y_arr[i] = y0_arr[i];
+
+                int n_of_iters[kVecWidth] = {};      // массив счетчиков итераций, пока хуй знает как назвать
+
+                for (int n = 0; n < kMaxIter; n++)
+                {
+                    float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x2[i] = x_arr[i] * x_arr[i];
+                    float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y2[i] = y_arr[i] * y_arr[i];
+                    float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) xy[i] = x_arr[i] * y_arr[i];
+
+                    float r2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) r2[i] = x2[i] + y2[i];
+
+                    int cmp[kVecWidth] = {};
+                    for (int i = 0; i < kVecWidth; i++)
+                        if (r2[i] <= kLmax  * kLmax )
+                            cmp[i] = 1;
+
+                    int mask = 0;       //битовый флаг активности четырёх точек
+
+                    for (int i = 0; i < kVecWidth; i++)
+                        mask |= cmp[i] << i;
+                    if (!mask)
+                        break;
+
+                    for (int i = 0; i < kVecWidth; i++)
+                        x_arr[i] = x2[i] - y2[i] + x0_arr[i];
+                    for (int i = 0; i < kVecWidth; i++)
+                        y_arr[i] = xy[i] + xy[i] + y0_arr[i];
+
+                    for (int i = 0; i < kVecWidth; i++)
+                        n_of_iters[i] += cmp[i];
+                }
+            }
         }
     }
+#endif // _GRAPHICS_MODE
     return;
 }
 

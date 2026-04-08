@@ -17,5 +17,6 @@ RGBQUAD GetColor(int n_of_iter)
         color.rgbGreen = (BYTE)gray;
         color.rgbRed   = (BYTE)gray;
     }
+    // color.rgbRed = 255; // всё красное
     return color;
 }
