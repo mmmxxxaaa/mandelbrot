@@ -1,1 +1,1 @@
-g++ -o different_mandelbrots.exe src/painting.cpp src/mandelbrots.cpp src/main.cpp -I C:\TXlib -I./include -mavx2 -march=native -D_GRAPHICS_MODE -D_SIMPLE_VER  -g -fno-omit-frame-pointer -O2 -DNDEBUG
+g++ -o different_mandelbrots.exe src/painting.cpp src/mandelbrots.cpp src/main.cpp -I C:\TXlib -I./include -mavx2 -march=native -D_QUAD_VER  -g -fno-omit-frame-pointer -O2 -DNDEBUG

@@ -11,7 +11,7 @@ static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float*
 {
     float step_x = *x_range * 0.05f;
     float step_y = *y_range * 0.05f;
-    if (GetAsyncKeyState(VK_RIGHT)) { printf("www"); *cur_xmin += step_x; *cur_xmax += step_x; }
+    if (GetAsyncKeyState(VK_RIGHT)) { *cur_xmin += step_x; *cur_xmax += step_x; }
     if (GetAsyncKeyState(VK_LEFT))  { *cur_xmin -= step_x; *cur_xmax -= step_x; }
     if (GetAsyncKeyState(VK_DOWN))  { *cur_ymin += step_y; *cur_ymax += step_y; }
     if (GetAsyncKeyState(VK_UP))    { *cur_ymin -= step_y; *cur_ymax -= step_y; }
@@ -38,7 +38,6 @@ static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float*
         *cur_ymax = *center_y + new_y_range * 0.5f;
         *x_range = *cur_xmax - *cur_xmin;
         *y_range = *cur_ymax - *cur_ymin;
-        printf("%f - new_x_range\n", new_x_range);
     }
 
     *center_x = (*cur_xmin + *cur_xmax) * 0.5f;
@@ -59,8 +58,6 @@ void SimpleMandelbrot(RGBQUAD* videoBuf)
     float center_y = (cur_ymin + cur_ymax) * 0.5f;
     float x_range = cur_xmax - cur_xmin;
     float y_range = cur_ymax - cur_ymin;
-    // printf("Ale\n");
-    // txBegin();
     while (!GetAsyncKeyState(VK_ESCAPE))
     {
         UpdateView(&cur_xmin, &cur_xmax, &cur_ymin, &cur_ymax,
@@ -68,10 +65,11 @@ void SimpleMandelbrot(RGBQUAD* videoBuf)
 
         float x_range_local = cur_xmax - cur_xmin;
         float y_range_local = cur_ymax - cur_ymin;
-
+        txLock();
         for (int y = 0; y < kHeight; y++)
         {
-            if (GetAsyncKeyState(VK_ESCAPE)) break;
+            if (GetAsyncKeyState(VK_ESCAPE))
+                break;
 
             float p0_im = cur_ymax - (float)y / kHeight * y_range_local;
 
@@ -97,8 +95,8 @@ void SimpleMandelbrot(RGBQUAD* videoBuf)
                 // printf("y=%d, pixel color: %d %d %d\n", y, videoBuf[y*kWidth].rgbRed, videoBuf[y*kWidth].rgbBlue, videoBuf[y*kWidth].rgbGreen);
             }
         }
+        txUnlock();
     }
-    // txEnd();
 #else
     //FIXME
     // volatile RGBQUAD* vbuf = videoBuf; //чтобы компилятор не удалил код как DCE
@@ -141,7 +139,6 @@ void QuadMandelbrot(RGBQUAD* videoBuf)
     assert(videoBuf != NULL);
 
 #if defined(_GRAPHICS_MODE)
-    // Интерактивный режим
     float cur_xmin = kXmin, cur_xmax = kXmax;
     float cur_ymin = kYmin, cur_ymax = kYmax;
     float center_x = (cur_xmin + cur_xmax) * 0.5f;
@@ -161,7 +158,9 @@ void QuadMandelbrot(RGBQUAD* videoBuf)
 
         for (int y = 0; y < kHeight; ++y)
         {
-            if (GetAsyncKeyState(VK_ESCAPE)) break;
+            if (GetAsyncKeyState(VK_ESCAPE))
+                break;
+
             float y0 = cur_ymax - (float)y / kHeight * y_range_local;
             for (int x = 0; x < kWidth; x += kVecWidth)
             {
@@ -202,7 +201,7 @@ void QuadMandelbrot(RGBQUAD* videoBuf)
 
                 for (int i = 0; i < kVecWidth; ++i)
                 {
-                    int offset = (kHeight - 1 - y) * kWidth + (x + i);
+                    int offset = y * kWidth + (x + i);
                     videoBuf[offset] = GetColor(n_of_iters[i]);
                 }
             }
@@ -273,6 +272,7 @@ void QuadMandelbrot(RGBQUAD* videoBuf)
         }
     }
 #endif // _GRAPHICS_MODE
+    printf("Done\n");
     return;
 }
 
@@ -280,69 +280,136 @@ void VectorMandelbrot(RGBQUAD* videoBuf)
 {
     assert(videoBuf != NULL);
 
-    const float x_range = kXmax - kXmin;
-    const float y_range = kYmax - kYmin;
-    const float dx = x_range / kWidth;
-    const float dy = y_range / kHeight;
-    const float r2_limit = kLmax * kLmax;
+#if defined(_GRAPHICS_MODE)
+    float cur_xmin = kXmin, cur_xmax = kXmax;
+    float cur_ymin = kYmin, cur_ymax = kYmax;
+    float center_x = (cur_xmin + cur_xmax) * 0.5f;
+    float center_y = (cur_ymin + cur_ymax) * 0.5f;
+    float x_range = cur_xmax - cur_xmin;
+    float y_range = cur_ymax - cur_ymin;
 
-    const __m256  r2max_vec   = _mm256_set1_ps(r2_limit);
-    const __m256i zero_i      = _mm256_setzero_si256();
-    const __m256  arr01234567 = _mm256_setr_ps(0, 1, 2, 3, 4, 5, 6, 7);
-    const __m256  const2      = _mm256_set1_ps(2.0f);
-
-    __m256 one_dx_arr   = _mm256_mul_ps(arr01234567, _mm256_set1_ps(dx));
-    __m256 eight_dx_arr = _mm256_set1_ps(8.0f * dx);
-
-    for (int y = 0; y < kHeight; y++)
+    while (!GetAsyncKeyState(VK_ESCAPE))
     {
-        float y0 = kYmax - (float)y / kHeight * y_range;
-        __m256 y0_vec = _mm256_set1_ps(y0);
+        UpdateView(&cur_xmin, &cur_xmax, &cur_ymin, &cur_ymax,
+                   &center_x, &center_y, &x_range, &y_range);
 
-        float x0_base = kXmin;
-        __m256 x0_vec = _mm256_add_ps(_mm256_set1_ps(x0_base), one_dx_arr);
-#if defined(_GRAPHICS_MODE)
-        RGBQUAD* current_row = videoBuf + (kHeight - 1 - y) * kWidth;
-#endif // _GRAPHICS_MODE
-        for (int x = 0; x < kWidth; x += 8)
+        float x_range_local = cur_xmax - cur_xmin;
+        float y_range_local = cur_ymax - cur_ymin;
+        float dx = x_range_local / kWidth;
+        float dy = y_range_local / kHeight;
+        float r2_limit = kLmax * kLmax;
+
+        const __m256  r2max_vec   = _mm256_set1_ps(r2_limit);
+        const __m256i zero_i      = _mm256_setzero_si256();
+        const __m256  arr01234567 = _mm256_setr_ps(0, 1, 2, 3, 4, 5, 6, 7);
+        const __m256  const2      = _mm256_set1_ps(2.0f);
+        __m256 one_dx_arr = _mm256_mul_ps(arr01234567, _mm256_set1_ps(dx));
+        __m256 eight_dx_arr = _mm256_set1_ps(8.0f * dx);
+
+        for (int y = 0; y < kHeight; y++)
         {
-            __m256 x_vec = x0_vec;
-            __m256 y_vec = y0_vec;
-            __m256i iters = zero_i;
+            if (GetAsyncKeyState(VK_ESCAPE)) break;
 
-            for (int n = 0; n < kMaxIter; ++n)
+            float y0 = cur_ymax - (float)y * dy; // или y / kHeight * y_range_local
+            __m256 y0_vec = _mm256_set1_ps(y0);
+
+            float x0_base = cur_xmin;
+            __m256 x0_vec = _mm256_add_ps(_mm256_set1_ps(x0_base), one_dx_arr);
+            RGBQUAD* current_row = videoBuf + y * kWidth;
+
+            for (int x = 0; x < kWidth; x += 8)
             {
-                __m256 x2 = _mm256_mul_ps(x_vec, x_vec);
-                __m256 y2 = _mm256_mul_ps(y_vec, y_vec);
-                __m256 xy = _mm256_mul_ps(x_vec, y_vec);
-                __m256 r2 = _mm256_add_ps(x2, y2);
+                __m256 x_vec = x0_vec;
+                __m256 y_vec = y0_vec;
+                __m256i iters = zero_i;
 
-                __m256 cmp_f = _mm256_cmp_ps(r2, r2max_vec, _CMP_LE_OQ);
-                int mask = _mm256_movemask_ps(cmp_f);
-                if (mask == 0)
-                    break;
+                for (int n = 0; n < kMaxIter; ++n)
+                {
+                    __m256 x2 = _mm256_mul_ps(x_vec, x_vec);
+                    __m256 y2 = _mm256_mul_ps(y_vec, y_vec);
+                    __m256 xy = _mm256_mul_ps(x_vec, y_vec);
+                    __m256 r2 = _mm256_add_ps(x2, y2);
 
-                __m256 new_x = _mm256_add_ps(_mm256_sub_ps(x2, y2), x0_vec); // new_x = x*x - y*y + x0
-                __m256 new_y = _mm256_fmadd_ps(const2, xy, y0_vec);          // new_y = 2*x*y + y0
-                //FIXME МБ КАПИТАЛЬНО ПОХУЙ
-                x_vec = _mm256_blendv_ps(x_vec, new_x, cmp_f); // если знаковый бит cmp_f[i] = 1 (т.е. cmp_f[i] < 0), берем new_x[i], иначе оставляем x_vec[i].
-                y_vec = _mm256_blendv_ps(y_vec, new_y, cmp_f);
+                    __m256 cmp_f = _mm256_cmp_ps(r2, r2max_vec, _CMP_LE_OQ);
+                    int mask = _mm256_movemask_ps(cmp_f);
+                    if (mask == 0)
+                        break;
 
-                __m256i cmp_i = _mm256_castps_si256(cmp_f); // чтобы потом использовать _mm256_sub_epi32
-                iters = _mm256_sub_epi32(iters, cmp_i);
+                    __m256 new_x = _mm256_add_ps(_mm256_sub_ps(x2, y2), x0_vec);
+                    __m256 new_y = _mm256_fmadd_ps(const2, xy, y0_vec);
+
+                    x_vec = _mm256_blendv_ps(x_vec, new_x, cmp_f);
+                    y_vec = _mm256_blendv_ps(y_vec, new_y, cmp_f);
+
+                    __m256i cmp_i = _mm256_castps_si256(cmp_f);
+                    iters = _mm256_sub_epi32(iters, cmp_i);
+                }
+
+                alignas(32) int iter_counts[8];
+                _mm256_store_si256((__m256i*)iter_counts, iters);
+
+                for (int i = 0; i < 8; ++i)
+                    current_row[x + i] = GetColor(iter_counts[i]);
+
+                x0_vec = _mm256_add_ps(x0_vec, eight_dx_arr);
             }
-
-            // мб это на интринсиках(вроде нет)
-            alignas(32) int iter_counts[8] = {};
-            _mm256_store_si256((__m256i*)iter_counts, iters);   // цвет будем обрабатывать скалярно
-
-#if defined(_GRAPHICS_MODE)
-            for (int i = 0; i < 8; ++i)
-                current_row[x + i] = GetColor(iter_counts[i]);
-#endif // _GRAPHICS_MODE
-
-            x0_vec = _mm256_add_ps(x0_vec, eight_dx_arr);
         }
     }
+#else
+    for (int perf = 0; perf < kPerformanceIters; perf++)
+    {
+        const float x_range = kXmax - kXmin;
+        const float y_range = kYmax - kYmin;
+        const float dx = x_range / kWidth;
+        const float dy = y_range / kHeight;
+        const float r2_limit = kLmax * kLmax;
+
+        const __m256  r2max_vec   = _mm256_set1_ps(r2_limit);
+        const __m256i zero_i      = _mm256_setzero_si256();
+        const __m256  arr01234567 = _mm256_setr_ps(0, 1, 2, 3, 4, 5, 6, 7);
+        const __m256  const2      = _mm256_set1_ps(2.0f);
+
+        __m256 one_dx_arr   = _mm256_mul_ps(arr01234567, _mm256_set1_ps(dx));
+        __m256 eight_dx_arr = _mm256_set1_ps(8.0f * dx);
+
+        for (int y = 0; y < kHeight; y++)
+        {
+            float y0 = kYmax - (float)y / kHeight * y_range;
+            __m256 y0_vec = _mm256_set1_ps(y0);
+
+            float x0_base = kXmin;
+            __m256 x0_vec = _mm256_add_ps(_mm256_set1_ps(x0_base), one_dx_arr);
+            for (int x = 0; x < kWidth; x += 8)
+            {
+                __m256 x_vec = x0_vec;
+                __m256 y_vec = y0_vec;
+                __m256i iters = zero_i;
+
+                for (int n = 0; n < kMaxIter; ++n)
+                {
+                    __m256 x2 = _mm256_mul_ps(x_vec, x_vec);
+                    __m256 y2 = _mm256_mul_ps(y_vec, y_vec);
+                    __m256 xy = _mm256_mul_ps(x_vec, y_vec);
+                    __m256 r2 = _mm256_add_ps(x2, y2);
+
+                    __m256 cmp_f = _mm256_cmp_ps(r2, r2max_vec, _CMP_LE_OQ);
+                    int mask = _mm256_movemask_ps(cmp_f);
+                    if (mask == 0)
+                        break;
+
+                    __m256 new_x = _mm256_add_ps(_mm256_sub_ps(x2, y2), x0_vec); // new_x = x*x - y*y + x0
+                    __m256 new_y = _mm256_fmadd_ps(const2, xy, y0_vec);          // new_y = 2*x*y + y0
+                    //FIXME МБ КАПИТАЛЬНО ПОХУЙ
+                    x_vec = _mm256_blendv_ps(x_vec, new_x, cmp_f); // если знаковый бит cmp_f[i] = 1 (т.е. cmp_f[i] < 0), берем new_x[i], иначе оставляем x_vec[i].
+                    y_vec = _mm256_blendv_ps(y_vec, new_y, cmp_f);
+
+                    __m256i cmp_i = _mm256_castps_si256(cmp_f); // чтобы потом использовать _mm256_sub_epi32
+                    iters = _mm256_sub_epi32(iters, cmp_i);
+                }
+                x0_vec = _mm256_add_ps(x0_vec, eight_dx_arr);
+            }
+        }
+    }
+#endif // _GRAPHICS_MODE
     return;
 }
