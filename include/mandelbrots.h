@@ -3,8 +3,14 @@
 
 #include <TXLib.h>
 
-const int   kVecWidth = 4;
 const int   kPerformanceIters = 2000;
+
+void ComputeSimple(RGBQUAD* video_buf, float xmin, float xmax,
+                   float ymin, float ymax, unsigned long long* total_iters);
+void ComputeQuad  (RGBQUAD* video_buf, float xmin, float xmax,
+                   float ymin, float ymax, unsigned long long* total_iters);
+void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax,
+                   float ymin, float ymax, unsigned long long* total_iters);
 
 void ProcessMandelbrot(RGBQUAD* videoBuf);
 

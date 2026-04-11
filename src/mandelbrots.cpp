@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-static void ComputeSimple(RGBQUAD* video_buf, float xmin,  float xmax, float ymin, float ymax,
+void ComputeSimple(RGBQUAD* video_buf, float xmin,  float xmax, float ymin, float ymax,
                           unsigned long long* total_iters)
 {
     // assert(video_buf != NULL);
@@ -46,7 +46,7 @@ static void ComputeSimple(RGBQUAD* video_buf, float xmin,  float xmax, float ymi
 #endif
 }
 
-static void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
+void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
                  unsigned long long* total_iters)
 {
     // assert(video_buf != NULL);
@@ -54,6 +54,7 @@ static void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, 
     float x_range = xmax - xmin;
     float y_range = ymax - ymin;
     float dx = x_range / kWidth;
+    const int kVecWidth = 8;
 
 #ifndef _GRAPHICS_MODE
     unsigned long long local = 0;
@@ -65,33 +66,33 @@ static void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, 
         {
             float x0 = xmin + (float)x / kWidth * x_range;
             float x0_arr[kVecWidth] = {};
-            for (int i = 0; i < kVecWidth; ++i) x0_arr[i] = x0 + i * dx;
+            for (int i = 0; i < kVecWidth; i++) x0_arr[i] = x0 + i * dx;
 
             float y0_arr[kVecWidth] = {};
-            for (int i = 0; i < kVecWidth; ++i) y0_arr[i] = y0;
+            for (int i = 0; i < kVecWidth; i++) y0_arr[i] = y0;
 
-            float x_arr[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) x_arr[i] = x0_arr[i];
-            float y_arr[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) y_arr[i] = y0_arr[i];
+            float x_arr[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x_arr[i] = x0_arr[i];
+            float y_arr[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y_arr[i] = y0_arr[i];
 
             int n_of_iters[kVecWidth] = {};
             for (int n = 0; n < kMaxIter; ++n)
             {
-                float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) x2[i] = x_arr[i] * x_arr[i];
-                float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) y2[i] = y_arr[i] * y_arr[i];
-                float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) xy[i] = x_arr[i] * y_arr[i];
-                float r2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; ++i) r2[i] = x2[i] + y2[i];
+                float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x2[i] = x_arr[i] * x_arr[i];
+                float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y2[i] = y_arr[i] * y_arr[i];
+                float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) xy[i] = x_arr[i] * y_arr[i];
+                float r2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) r2[i] = x2[i] + y2[i];
 
                 int cmp[kVecWidth] = {0};
-                for (int i = 0; i < kVecWidth; ++i)
+                for (int i = 0; i < kVecWidth; i++)
                     if (r2[i] <= kLmax * kLmax)
                         cmp[i] = 1;
 
                 int mask = 0;
-                for (int i = 0; i < kVecWidth; ++i) mask |= cmp[i] << i;
+                for (int i = 0; i < kVecWidth; i++) mask |= cmp[i] << i;
                 if (!mask) break;
-                for (int i = 0; i < kVecWidth; ++i) x_arr[i] = x2[i] - y2[i] + x0_arr[i];
-                for (int i = 0; i < kVecWidth; ++i) y_arr[i] = xy[i] + xy[i] + y0_arr[i];
-                for (int i = 0; i < kVecWidth; ++i) n_of_iters[i] += cmp[i];
+                for (int i = 0; i < kVecWidth; i++) if (cmp[i]) x_arr[i] = x2[i] - y2[i] + x0_arr[i];
+                for (int i = 0; i < kVecWidth; i++) if (cmp[i]) y_arr[i] = xy[i] + xy[i] + y0_arr[i];
+                for (int i = 0; i < kVecWidth; i++) n_of_iters[i] += cmp[i];
             }
             for (int i = 0; i < kVecWidth; ++i)
             {
@@ -108,7 +109,7 @@ static void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, 
 #endif
 }
 
-static void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
+void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
                           unsigned long long* total_iters)
 {
     // assert(video_buf != NULL);
@@ -183,7 +184,6 @@ static void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin
     *total_iters += local;
 #endif
 }
-
 
 static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float* cur_ymax,
                        float* center_x, float* center_y, float* x_range,  float* y_range)
