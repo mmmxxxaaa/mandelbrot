@@ -9,7 +9,10 @@
 void ComputeSimple(RGBQUAD* video_buf, float xmin,  float xmax, float ymin, float ymax,
                           unsigned long long* total_iters)
 {
-    // assert(video_buf != NULL);
+#ifdef _GRAPHICS_MODE
+    assert(video_buf != NULL);
+#endif
+
     float x_range = xmax - xmin;
     float y_range = ymax - ymin;
 
@@ -49,7 +52,9 @@ void ComputeSimple(RGBQUAD* video_buf, float xmin,  float xmax, float ymin, floa
 void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
                  unsigned long long* total_iters)
 {
-    // assert(video_buf != NULL);
+#ifdef _GRAPHICS_MODE
+    assert(video_buf != NULL);
+#endif //_GRAPHICS_MODE
 
     float x_range = xmax - xmin;
     float y_range = ymax - ymin;
@@ -106,13 +111,15 @@ void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float y
     }
 #ifndef _GRAPHICS_MODE
     *total_iters += local;
-#endif
+#endif //_GRAPHICS_MODE
 }
 
 void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float ymax,
                           unsigned long long* total_iters)
 {
-    // assert(video_buf != NULL);
+#ifdef _GRAPHICS_MODE
+    assert(video_buf != NULL);
+#endif //_GRAPHICS_MODE
 
     float x_range = xmax - xmin;
     float y_range = ymax - ymin;
@@ -128,7 +135,7 @@ void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float
     __m256 eight_dx_arr = _mm256_set1_ps(8.0f * dx);
 #ifndef _GRAPHICS_MODE
     unsigned long long local = 0;
-#endif
+#endif //_GRAPHICS_MODE
     for (int y = 0; y < kHeight; y++)
     {
         float y0 = ymax - (float)y * dy; // или y / kHeight * y_range_local
@@ -175,14 +182,14 @@ void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float
             video_buf[y * kWidth + (x + i)] = GetColor(iter_counts[i]);
 #else
             local += iter_counts[i];
-#endif
+#endif //_GRAPHICS_MODE
             }
             x0_vec = _mm256_add_ps(x0_vec, eight_dx_arr);
         }
     }
 #ifndef _GRAPHICS_MODE
     *total_iters += local;
-#endif
+#endif  //_GRAPHICS_MODE
 }
 
 static void UpdateView(float* cur_xmin, float* cur_xmax, float* cur_ymin, float* cur_ymax,
@@ -243,7 +250,7 @@ void ProcessMandelbrot(RGBQUAD* video_buf)
                    &center_x, &center_y, &x_range,  &y_range);
     #if defined(_SIMPLE_VER)
         ComputeSimple(video_buf, cur_xmin, cur_xmax, cur_ymin, cur_ymax, NULL);
-    #endif //
+    #endif // FIXME
     #if defined(_QUAD_VER)
         ComputeQuad(video_buf, cur_xmin, cur_xmax, cur_ymin, cur_ymax, NULL);
     #endif //
