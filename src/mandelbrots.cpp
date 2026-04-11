@@ -59,7 +59,7 @@ void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float y
 #ifndef _GRAPHICS_MODE
     unsigned long long local = 0;
 #endif
-    for (int y = 0; y < kHeight; ++y)
+    for (int y = 0; y < kHeight; y++)
     {
         float y0 = ymax - (float)y / kHeight * y_range;
         for (int x = 0; x < kWidth; x += kVecWidth)
@@ -75,7 +75,7 @@ void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float y
             float y_arr[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y_arr[i] = y0_arr[i];
 
             int n_of_iters[kVecWidth] = {};
-            for (int n = 0; n < kMaxIter; ++n)
+            for (int n = 0; n < kMaxIter; n++)
             {
                 float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x2[i] = x_arr[i] * x_arr[i];
                 float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y2[i] = y_arr[i] * y_arr[i];
@@ -144,7 +144,7 @@ void ComputeVector(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float
             __m256 y_vec = y0_vec;
             __m256i iters = zero_i;
 
-            for (int n = 0; n < kMaxIter; ++n)
+            for (int n = 0; n < kMaxIter; n++)
             {
                 __m256 x2 = _mm256_mul_ps(x_vec, x_vec);
                 __m256 y2 = _mm256_mul_ps(y_vec, y_vec);
