@@ -67,7 +67,7 @@
       <tr>
         <td style="text-align: center;">res_quad_o2</td>
         <td style="text-align: center;">72735513203</td>
-        <td rowspan="4" style="text-align: left; vertical-align: top;">
+        <td rowspan="2" style="text-align: left; vertical-align: top;">
           <img src="data/Quad_before_fixes/monitoring_graph.png" alt="Мониторинг" width="650">
         </td>
       </tr>
