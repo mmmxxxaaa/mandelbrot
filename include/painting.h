@@ -2,8 +2,8 @@
 #define PAINTING_H_
 #include <TXLib.h>
 
-const int   kWidth   = 1200;
-const int   kHeight  = 900;
+const int   kWidth   = 800;
+const int   kHeight  = 600;
 const float kXmin = -2.2f;
 const float kXmax = 1.0f;
 const float kYmin = -1.2f;

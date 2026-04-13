@@ -6,7 +6,7 @@
 // const char* kDefaultFilename = "benchmark_results.csv";
 const int kTestIterationCount = 250;
 const int kWarmupTestCount = 2;
-const int kTestCount = 5;
+const int kTestCount = 10;
 
 static void MakeTestIteration(unsigned long long* total_iters);
 void MakeTests(const char* filename);

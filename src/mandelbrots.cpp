@@ -84,19 +84,30 @@ void ComputeQuad(RGBQUAD* video_buf, float xmin, float xmax, float ymin, float y
             {
                 float x2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) x2[i] = x_arr[i] * x_arr[i];
                 float y2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) y2[i] = y_arr[i] * y_arr[i];
-                float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) xy[i] = x_arr[i] * y_arr[i];
+                float xy[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) xy[i] = x_arr[i] * y_arr[i]; //FIXME где двойка нах
                 float r2[kVecWidth] = {}; for (int i = 0; i < kVecWidth; i++) r2[i] = x2[i] + y2[i];
 
                 int cmp[kVecWidth] = {0};
                 for (int i = 0; i < kVecWidth; i++)
                     if (r2[i] <= kLmax * kLmax)
                         cmp[i] = 1;
+                    else
+                        cmp[i] = 0;
 
-                int mask = 0;
+                // int mask = 0;
+                // for (int i = 0; i < kVecWidth; i++) mask |= cmp[i] << i;
+                // if (!mask) break; //FIXME перестановка (вторая хуйня)
+
+                //FIXME первая хуйня
+                // for (int i = 0; i < kVecWidth; i++) if (cmp[i]) x_arr[i] = x2[i] - y2[i] + x0_arr[i]; else x_arr[i] = x_arr[i];
+                // for (int i = 0; i < kVecWidth; i++) if (cmp[i]) y_arr[i] = xy[i] + xy[i] + y0_arr[i]; else y_arr[i] = y_arr[i];
+                for (int i = 0; i < kVecWidth; i++) x_arr[i] = (cmp[i]) * (x2[i] - y2[i] + x0_arr[i]) + (!cmp[i]) * x_arr[i];
+                for (int i = 0; i < kVecWidth; i++) y_arr[i] = (cmp[i]) * (xy[i] + xy[i] + y0_arr[i]) + (!cmp[i]) * y_arr[i];
+
+                int mask = 0; //FIXME (откат) НИКак не саргументируешь (3)
                 for (int i = 0; i < kVecWidth; i++) mask |= cmp[i] << i;
                 if (!mask) break;
-                for (int i = 0; i < kVecWidth; i++) if (cmp[i]) x_arr[i] = x2[i] - y2[i] + x0_arr[i];
-                for (int i = 0; i < kVecWidth; i++) if (cmp[i]) y_arr[i] = xy[i] + xy[i] + y0_arr[i];
+
                 for (int i = 0; i < kVecWidth; i++) n_of_iters[i] += cmp[i];
             }
             for (int i = 0; i < kVecWidth; ++i)
